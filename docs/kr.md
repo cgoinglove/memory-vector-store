@@ -43,14 +43,14 @@ const store = memoryVectorStore(vectorParser);
 ```javascript
 import OpenAI from 'openai';
 // Node.js용
-import { memoryVectorStore } from 'memory-vector-store';
+import { memoryVectorStore, MemoryVectorParser } from 'memory-vector-store';
 // 브라우저용: import { browserMemoryVectorStore } from 'memory-vector-store/browser';
 
 const openai = new OpenAI({
   apiKey: 'YOUR_OPENAI_API_KEY',
 });
 
-const vectorParser = async (data) => {
+const vectorParser:MemoryVectorParser = async (data) => {
   const response = await openai.embeddings.create({
     model: 'text-embedding-ada-002',
     input: data,
@@ -89,10 +89,10 @@ console.log(result.map((v) => v.data));
 import { embed } from 'ai';
 import { ollama } from 'ollama-ai-provider';
 // Node.js용
-import { memoryVectorStore } from 'memory-vector-store';
+import { memoryVectorStore, MemoryVectorParser } from 'memory-vector-store';
 // 브라우저용: import { memoryVectorStore } from 'memory-vector-store/browser';
 
-const vectorParser = async (data) => {
+const vectorParser:MemoryVectorParser = async (data) => {
   const result = await embed({
     model: ollama.embedding('nomic-embed-text'),
     value: data,
@@ -149,7 +149,7 @@ Node.js 환경용 벡터 저장소 인스턴스를 생성합니다.
 ### 저장소 메서드
 
 - `add(data: string)`: 벡터 저장소에 데이터 추가
-- `similaritySearch(query: string, k?: number, filter?: Function)`: 유사한 항목 검색
+- `similaritySearch(query: string, k?: number, filter?: MemoryVectorData => boolean)`: 유사한 항목 검색
 - `remove(data: string)`: 특정 항목 제거
 - `clear()`: 모든 항목 제거
 - `getAll()`: 저장된 모든 항목 가져오기

@@ -43,14 +43,14 @@ const store = memoryVectorStore(vectorParser);
 ```javascript
 import OpenAI from 'openai';
 // For Node.js
-import { memoryVectorStore } from 'memory-vector-store';
+import { memoryVectorStore,MemoryVectorParser } from 'memory-vector-store';
 // For Browser: import { browserMemoryVectorStore } from 'memory-vector-store/browser';
 
 const openai = new OpenAI({
   apiKey: 'YOUR_OPENAI_API_KEY',
 });
 
-const vectorParser = async (data) => {
+const vectorParser:MemoryVectorParser = async (data) => {
   const response = await openai.embeddings.create({
     model: 'text-embedding-ada-002',
     input: data,
@@ -89,10 +89,10 @@ console.log(result.map((v) => v.data));
 import { embed } from 'ai';
 import { ollama } from 'ollama-ai-provider';
 // For Node.js
-import { memoryVectorStore } from 'memory-vector-store';
+import { memoryVectorStore, MemoryVectorParser } from 'memory-vector-store';
 // For Browser: import { memoryVectorStore } from 'memory-vector-store/browser';
 
-const vectorParser = async (data) => {
+const vectorParser:MemoryVectorParser = async (data) => {
   const result = await embed({
     model: ollama.embedding('nomic-embed-text'),
     value: data,
@@ -149,7 +149,7 @@ Creates a new vector store instance for browser environment.
 ### Store Methods
 
 - `add(data: string)`: Add data to the vector store
-- `similaritySearch(query: string, k?: number, filter?: Function)`: Search for similar items
+- `similaritySearch(query: string, k?: number, filter?: MemoryVectorData => boolean)`: Search for similar items
 - `remove(data: string)`: Remove a specific item
 - `clear()`: Remove all items
 - `getAll()`: Get all stored items
