@@ -46,7 +46,7 @@ import { MemoryVectorParser, MemoryVectorStoreOptions } from '../interface';
  * capacity limits compared to browser environments. The maxFileSizeMB can be set to
  * higher values according to your disk space and memory constraints.
  */
-export function MemoryVectorStore(vectorParser: MemoryVectorParser, options?: Partial<MemoryVectorStoreOptions>) {
+export function memoryVectorStore(vectorParser: MemoryVectorParser, options?: Partial<MemoryVectorStoreOptions>) {
   const defaultOptions: MemoryVectorStoreOptions = {
     autoSave: true,
     debug: false,
@@ -58,3 +58,5 @@ export function MemoryVectorStore(vectorParser: MemoryVectorParser, options?: Pa
   defaultOptions.maxFileSizeMB = Math.max(Math.min(defaultOptions.maxFileSizeMB, 1000), 1);
   return new VectorStore(vectorParser, new NodeStorageProvider(), defaultOptions);
 }
+
+export * from '../interface';

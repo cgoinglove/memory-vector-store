@@ -16,21 +16,21 @@
   ],
   "author": "cgoinglove",
   "license": "MIT",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/core/node.js",
   "module": "./dist/core/node.js",
-  "types": "./dist/interface.d.ts",
+  "types": "./dist/core/node.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/interface.d.ts",
+      "types": "./dist/core/node.d.ts",
       "import": "./dist/core/node.js",
       "require": "./dist/core/node.cjs",
       "default": "./dist/core/node.js"
     },
     "./browser": {
-      "types": "./dist/interface.d.ts",
+      "types": "./dist/core/browser.d.ts",
       "import": "./dist/core/browser.js",
       "default": "./dist/core/browser.js"
     }

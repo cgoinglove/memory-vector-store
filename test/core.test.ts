@@ -1,6 +1,6 @@
 // test/node-vector-store.test.ts
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MemoryVectorStore } from '../src/core/node';
+import { memoryVectorStore } from '../src/core/node';
 import fs from 'fs';
 import path from 'path';
 
@@ -13,7 +13,7 @@ const mockVectorParser = (text: string): number[] => {
   return [text.length, text.charCodeAt(0), text.length * 0.5];
 };
 
-describe('MemoryVectorStore (Node)', () => {
+describe('memoryVectorStore (Node)', () => {
   // 각 테스트 이전에 실행
   beforeEach(() => {
     // 이전 테스트 파일 삭제
@@ -31,7 +31,7 @@ describe('MemoryVectorStore (Node)', () => {
   });
 
   it('should create a vector store instance', () => {
-    const store = MemoryVectorStore(mockVectorParser, {
+    const store = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
     expect(store).toBeDefined();
@@ -40,7 +40,7 @@ describe('MemoryVectorStore (Node)', () => {
   });
 
   it('should add items to the store', async () => {
-    const store = MemoryVectorStore(mockVectorParser, {
+    const store = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 
@@ -54,14 +54,14 @@ describe('MemoryVectorStore (Node)', () => {
   });
 
   it('should return cached items when adding duplicate data', async () => {
-    const store = MemoryVectorStore(mockVectorParser, {
+    const store = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 
     await store.add('test data');
     await store.save();
     const spyParser = vi.fn(mockVectorParser);
-    const storeWithSpy = MemoryVectorStore(spyParser, {
+    const storeWithSpy = memoryVectorStore(spyParser, {
       storagePath: TEST_FILE_PATH,
     });
     await storeWithSpy.add('test data');
@@ -73,7 +73,7 @@ describe('MemoryVectorStore (Node)', () => {
   });
 
   it('should search for similar items', async () => {
-    const store = MemoryVectorStore(mockVectorParser, {
+    const store = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 
@@ -88,7 +88,7 @@ describe('MemoryVectorStore (Node)', () => {
   });
 
   it('should remove items from the store', async () => {
-    const store = MemoryVectorStore(mockVectorParser, {
+    const store = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 
@@ -105,7 +105,7 @@ describe('MemoryVectorStore (Node)', () => {
   });
 
   it('should clear all items from the store', async () => {
-    const store = MemoryVectorStore(mockVectorParser, {
+    const store = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 
@@ -120,7 +120,7 @@ describe('MemoryVectorStore (Node)', () => {
 
   it('should save and load data from storage', async () => {
     // 첫 번째 인스턴스 생성 및 데이터 추가
-    const store1 = MemoryVectorStore(mockVectorParser, {
+    const store1 = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 
@@ -129,7 +129,7 @@ describe('MemoryVectorStore (Node)', () => {
     await store1.save(); // 명시적으로 저장
 
     // 두 번째 인스턴스 생성 (같은 저장소 경로)
-    const store2 = MemoryVectorStore(mockVectorParser, {
+    const store2 = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 
@@ -140,7 +140,7 @@ describe('MemoryVectorStore (Node)', () => {
   });
 
   it('should apply filter function when searching', async () => {
-    const store = MemoryVectorStore(mockVectorParser, {
+    const store = memoryVectorStore(mockVectorParser, {
       storagePath: TEST_FILE_PATH,
     });
 

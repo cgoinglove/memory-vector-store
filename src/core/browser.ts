@@ -44,7 +44,7 @@ import { VectorStore } from './vector-store';
  * Note: maxFileSizeMB is clamped between 0.1MB and 3MB for browser environments
  * due to localStorage limitations.
  */
-export function MemoryVectorStore(vectorParser: MemoryVectorParser, options?: Partial<MemoryVectorStoreOptions>) {
+export function memoryVectorStore(vectorParser: MemoryVectorParser, options?: Partial<MemoryVectorStoreOptions>) {
   const defaultOptions: MemoryVectorStoreOptions = {
     autoSave: true,
     debug: false,
@@ -57,3 +57,4 @@ export function MemoryVectorStore(vectorParser: MemoryVectorParser, options?: Pa
 
   return new VectorStore(vectorParser, new BrowserStorageProvider(), defaultOptions);
 }
+export * from '../interface';
