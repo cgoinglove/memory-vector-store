@@ -60,4 +60,6 @@ export function browserMemoryVectorStore(
 
   return new VectorStore(vectorParser, new BrowserStorageProvider(), defaultOptions);
 }
+
+export { doc } from './vector-store';
 export * from '../interface';

@@ -59,4 +59,6 @@ export function memoryVectorStore(vectorParser: MemoryVectorParser, options?: Pa
   return new VectorStore(vectorParser, new NodeStorageProvider(), defaultOptions);
 }
 
+export { doc } from './vector-store';
+
 export * from '../interface';

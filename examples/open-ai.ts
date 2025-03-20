@@ -14,7 +14,7 @@ const vectorParser: MemoryVectorParser = async (data: string) => {
   return response.data[0].embedding;
 };
 
-const vectorStore = memoryVectorStore(vectorParser, { autoSave: false });
+const vectorStore = memoryVectorStore(vectorParser);
 
 const dataList = [
   'Adidas Soccer Cleats',
@@ -34,5 +34,5 @@ for (const data of dataList) {
 
 const result = await vectorStore.similaritySearch('foot', 2);
 
-console.log(result.map((v) => v.content));
-// [ 'Adidas Running Shoes', 'Nike Basketball Sneakers' ]
+console.log(result);
+// [ { content: 'Adidas Running Shoes', score: 0.99 }, { content: 'Nike Basketball Sneakers', score: 0.88 } ]

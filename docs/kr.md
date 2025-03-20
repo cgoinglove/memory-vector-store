@@ -11,7 +11,7 @@ Node.js와 브라우저 환경 모두에서 작동하는 경량화된 메모리 
 - 💾 **영구 저장소**: 브라우저(localStorage)나 Node.js(파일 시스템)에서 자동 저장
 - 🔍 **유사도 검색**: 코사인 유사도를 이용한 벡터 검색 내장
 - 🧩 **프레임워크 독립적**: 어떤 임베딩 모델이나 프레임워크와도 호환
-- ⚡ **성능 최적화**: 캐싱과 디바운스 저장 메커니즘으로 성능 개선
+- ⚡ **성능 최적화**: 전역 캐싱, 경로 기반 공유, 디바운스 저장 메커니즘으로 성능 개선
 
 ## 설치
 
@@ -29,7 +29,7 @@ pnpm add memory-vector-store
 import { memoryVectorStore } from 'memory-vector-store';
 
 // 벡터 파서 함수 정의
-const vectorParser = (text) => {
+const vectorParser = (content) => {
   // 예시: 텍스트를 벡터로 변환
   return [1, 2, 3]; // 벡터 표현 반환
 };
@@ -50,10 +50,10 @@ const openai = new OpenAI({
   apiKey: 'YOUR_OPENAI_API_KEY',
 });
 
-const vectorParser:MemoryVectorParser = async (data) => {
+const vectorParser: MemoryVectorParser = async (content) => {
   const response = await openai.embeddings.create({
     model: 'text-embedding-ada-002',
-    input: data,
+    input: content,
   });
 
   return response.data[0].embedding;
@@ -61,26 +61,23 @@ const vectorParser:MemoryVectorParser = async (data) => {
 
 const vectorStore = memoryVectorStore(vectorParser, { autoSave: false });
 
-const dataList = [
-  'Adidas 축구화',
-  'Nike 스포츠 재킷',
-  'Adidas 트레이닝 반바지',
-  'Nike 농구화',
-  'Adidas 러닝화',
-  'Nike 캐주얼 티셔츠',
-  'Adidas 캐주얼 후드티',
-  'Nike 스포츠 가방',
-  'Adidas 레깅스',
-];
+// 단순 텍스트 콘텐츠 추가
+await vectorStore.add('아디다스 러닝화');
 
-for (const data of dataList) {
-  await vectorStore.add(data);
-}
+// 메타데이터를 포함한 콘텐츠 추가
+await vectorStore.add({
+  content: '나이키 농구화',
+  metadata: { 브랜드: '나이키', 카테고리: '농구', 가격: 120000 },
+});
 
-const result = await vectorStore.similaritySearch('신발', 2);
+// 필터를 사용한 검색
+const result = await vectorStore.similaritySearch('스포츠 신발');
 
-console.log(result.map((v) => v.data));
-// [ 'Adidas 러닝화', 'Nike 농구화' ]
+console.log(result);
+// [
+//   { content: '나이키 농구화', metadata: { 브랜드: '나이키', ... }, score: 0.89 },
+//   { content: '아디다스 러닝화', score: 0.75 }
+// ]
 ```
 
 ## Vercel AI SDK와 Ollama 사용하기
@@ -89,39 +86,38 @@ console.log(result.map((v) => v.data));
 import { embed } from 'ai';
 import { ollama } from 'ollama-ai-provider';
 // Node.js용
-import { memoryVectorStore, MemoryVectorParser } from 'memory-vector-store';
+import { memoryVectorStore, MemoryVectorParser, doc } from 'memory-vector-store';
 // 브라우저용: import { memoryVectorStore } from 'memory-vector-store/browser';
 
-const vectorParser:MemoryVectorParser = async (data) => {
+const vectorParser: MemoryVectorParser = async (content) => {
   const result = await embed({
     model: ollama.embedding('nomic-embed-text'),
-    value: data,
+    value: content,
   });
   return result.embedding;
 };
 
 const vectorStore = memoryVectorStore(vectorParser, { autoSave: false });
 
-const dataList = [
-  'Adidas 축구화',
-  'Nike 스포츠 재킷',
-  'Adidas 트레이닝 반바지',
-  'Nike 농구화',
-  'Adidas 러닝화',
-  'Nike 캐주얼 티셔츠',
-  'Adidas 캐주얼 후드티',
-  'Nike 스포츠 가방',
-  'Adidas 레깅스',
+// 헬퍼 함수를 사용하여 메타데이터가 있는 문서 생성
+const products = [
+  doc('아디다스 축구화', { 카테고리: '축구', 브랜드: '아디다스' }),
+  doc('나이키 스포츠 재킷', { 카테고리: '의류', 브랜드: '나이키' }),
+  doc('아디다스 러닝화', { 카테고리: '러닝', 브랜드: '아디다스' }),
 ];
 
-for (const data of dataList) {
-  await vectorStore.add(data);
+for (const product of products) {
+  await vectorStore.add(product);
 }
 
+// 브랜드별 필터링 및 유사 항목 검색
 const result = await vectorStore.similaritySearch('신발', 2);
 
-console.log(result.map((v) => v.data));
-// [ 'Adidas 러닝화', 'Nike 농구화' ]
+console.log(result.map((item) => ({ content: item.content, score: item.score })));
+// [
+//   { content: '아디다스 러닝화', score: 0.92 },
+//   { content: '아디다스 축구화', score: 0.86 }
+// ]
 ```
 
 ## API
@@ -133,6 +129,10 @@ Node.js 환경용 벡터 저장소 인스턴스를 생성합니다.
 ### `browserMemoryVectorStore(vectorParser, options?)` ('memory-vector-store/browser'에서 가져옴)
 
 브라우저 환경용 벡터 저장소 인스턴스를 생성합니다.
+
+### `doc(content, metadata?)`
+
+메타데이터가 있는 문서 객체를 생성하는 헬퍼 함수입니다.
 
 **매개변수:**
 
@@ -148,13 +148,38 @@ Node.js 환경용 벡터 저장소 인스턴스를 생성합니다.
 
 ### 저장소 메서드
 
-- `add(data: string)`: 벡터 저장소에 데이터 추가
-- `similaritySearch(query: string, k?: number, filter?: MemoryVectorData => boolean)`: 유사한 항목 검색
-- `remove(data: string)`: 특정 항목 제거
+- `add(content: string)`: 텍스트 콘텐츠를 벡터 저장소에 추가
+- `add(document: MemoryDocument)`: 메타데이터가 있는 문서를 벡터 저장소에 추가
+- `similaritySearch(query: string, k?: number, filter?: (doc: MemoryDocument) => boolean)`: 선택적 필터링을 통한 유사 항목 검색
+- `remove(content: string)`: 특정 항목 제거
 - `clear()`: 모든 항목 제거
-- `getAll()`: 저장된 모든 항목 가져오기
+- `getAll()`: 저장된 모든 문서 가져오기
 - `count()`: 저장된 항목 수 확인
 - `save()`: 저장소 수동 저장
+
+### 데이터 타입
+
+- `MemoryDocument<T>`: `{ content: string, metadata?: T }` - 콘텐츠와 선택적 메타데이터가 있는 문서
+- 검색 결과에는 문서와 유사도를 나타내는 `score` 속성이 포함됩니다
+
+## 고급 기능
+
+### 전역 캐싱
+
+라이브러리는 더 나은 성능을 위해 자동으로 전역 캐시를 사용합니다:
+
+- 동일한 저장 경로를 가진 여러 벡터 저장소 인스턴스가 같은 데이터를 공유합니다
+- 한 인스턴스에서 변경한 내용이 다른 모든 인스턴스에 반영됩니다
+- 동일한 데이터에 대한 중복 디스크 읽기를 방지합니다
+
+```javascript
+// 두 저장소가 동일한 데이터를 공유합니다
+const store1 = memoryVectorStore(vectorParser, { storagePath: './data.json' });
+const store2 = memoryVectorStore(vectorParser, { storagePath: './data.json' });
+
+await store1.add('안녕하세요');
+console.log(await store2.count()); // 출력: 1
+```
 
 ## 제한사항 및 권장사항
 
