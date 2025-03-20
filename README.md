@@ -1,44 +1,44 @@
 # 🧩 Memory Vector Store
 
-Node.js와 브라우저 환경 모두에서 작동하는 경량화된 메모리 기반 벡터 저장소입니다. 최소한의 의존성으로 벡터 임베딩을 효율적으로 저장, 검색, 검색할 수 있습니다.
+English | [한국어](./docs/kr.md)
 
-> **참고:** 이 라이브러리는 주로 개발 환경과 프로토타이핑을 위해 설계되었습니다. 대규모 벡터 저장이 필요한 프로덕션 애플리케이션에서는 전용 벡터 데이터베이스나 특화된 솔루션을 고려하세요.
+A lightweight memory-based vector store with persistent storage support for both Node.js and browser environments. Efficiently store, retrieve, and search vector embeddings with minimal dependencies.
 
-## 주요 기능
+## Features
 
-- 🪶 **경량화**: 최소한의 의존성과 작은 용량
-- 🔄 **크로스 플랫폼**: Node.js와 브라우저 환경 모두에서 작동
-- 💾 **영구 저장소**: 브라우저(localStorage)나 Node.js(파일 시스템)에서 자동 저장
-- 🔍 **유사도 검색**: 코사인 유사도를 이용한 벡터 검색 내장
-- 🧩 **프레임워크 독립적**: 어떤 임베딩 모델이나 프레임워크와도 호환
-- ⚡ **성능 최적화**: 전역 캐싱, 경로 기반 공유, 디바운스 저장 메커니즘
+- 🪶 **Lightweight**: Minimal dependencies and small footprint
+- 🔄 **Cross-platform**: Works in both Node.js and browser environments
+- 💾 **Persistent storage**: Automatic saving to localStorage (browser) or file system (Node.js)
+- 🔍 **Similarity search**: Built-in cosine similarity for vector searching
+- 🧩 **Framework agnostic**: Works with any embedding model or framework
+- ⚡ **Performance optimized**: Global caching, path-based sharing, and debounced saving
 
-## 설치
+## Installation
 
 ```bash
 npm install memory-vector-store
-# 또는
+# or
 yarn add memory-vector-store
-# 또는
+# or
 pnpm add memory-vector-store
 ```
 
-## 기본 사용법
+## Basic Usage
 
 ```javascript
 import { memoryVectorStore } from 'memory-vector-store';
 
-// 벡터 파서 함수 정의
+// Define your vector parser function
 const vectorParser = (content) => {
-  // 예시: 텍스트를 벡터로 변환
-  return [1, 2, 3]; // 벡터 표현 반환
+  // Example: convert text to vector
+  return [1, 2, 3]; // return a vector representation
 };
 
-// 벡터 저장소 생성
+// Create a vector store
 const store = memoryVectorStore(vectorParser);
 ```
 
-## OpenAI와 함께 사용하기
+## Using with OpenAI
 
 ```javascript
 import OpenAI from 'openai';
@@ -60,28 +60,28 @@ const vectorParser: MemoryVectorParser = async (data: string) => {
 const vectorStore = memoryVectorStore(vectorParser);
 
 const dataList = [
-  'Adidas 축구화',
-  'Nike 스포츠 재킷',
-  'Adidas 트레이닝 반바지',
-  'Nike 농구화',
-  'Adidas 러닝화',
-  'Nike 캐주얼 티셔츠',
-  'Adidas 캐주얼 후드티',
-  'Nike 스포츠 가방',
-  'Adidas 레깅스',
+  'Adidas Soccer Cleats',
+  'Nike Sports Jacket',
+  'Adidas Training Shorts',
+  'Nike Basketball Sneakers',
+  'Adidas Running Shoes',
+  'Nike Casual T-Shirt',
+  'Adidas Casual Hoodie',
+  'Nike Sports Bag',
+  'Adidas Leggings',
 ];
 
 for (const data of dataList) {
   await vectorStore.add(data);
 }
 
-const result = await vectorStore.similaritySearch('신발', 2);
+const result = await vectorStore.similaritySearch('foot', 2);
 
 console.log(result);
-// [ { content: 'Adidas 러닝화', score: 0.99 }, { content: 'Nike 농구화', score: 0.88 } ]
+// [ { content: 'Adidas Running Shoes', score: 0.99 }, { content: 'Nike Basketball Sneakers', score: 0.88 } ]
 ```
 
-## Vercel AI SDK와 Ollama 사용하기
+## Using with Vercel AI SDK and Ollama
 
 ```javascript
 import { embed } from 'ai';
@@ -98,75 +98,73 @@ const vectorParser: MemoryVectorParser = async (data: string) => {
 
 const vectorStore = memoryVectorStore(vectorParser);
 
-// 메타데이터가 있는 항목 추가
-await vectorStore.add(doc('아디다스 러닝화', { 브랜드: '아디다스' }));
-await vectorStore.add(doc('나이키 농구화', { 브랜드: '나이키' }));
-await vectorStore.add('캐주얼 티셔츠');
+// Add items with metadata
+await vectorStore.add(doc('Adidas Running Shoes', { brand: 'Adidas' }));
+await vectorStore.add(doc('Nike Basketball Sneakers', { brand: 'Nike' }));
+await vectorStore.add('Casual T-Shirt');
 
-const result = await vectorStore.similaritySearch('신발', 2);
+const result = await vectorStore.similaritySearch('foot', 2);
 
 console.log(result);
-// [ { content: '아디다스 러닝화', metadata: { 브랜드: '아디다스' }, score: 0.99 },
-//   { content: '나이키 농구화', metadata: { 브랜드: '나이키' }, score: 0.88 } ]
+// [ { content: 'Adidas Running Shoes', metadata: { brand: 'Adidas' }, score: 0.99 }, 
+//   { content: 'Nike Basketball Sneakers', metadata: { brand: 'Nike' }, score: 0.88 } ]
 ```
 
-## 문서 추가하기
+## Adding Documents
 
-Memory Vector Store는 다양한 방법으로 문서를 추가할 수 있습니다:
+Memory Vector Store supports different ways to add documents:
 
 ```javascript
-// 1. 일반 텍스트 추가
-await vectorStore.add('아디다스 러닝화');
+// 1. Add plain text
+await vectorStore.add('Adidas Running Shoes');
 
-// 2. 메타데이터가 있는 문서 추가
+// 2. Add document with metadata
 await vectorStore.add({
-  content: '나이키 농구화',
-  metadata: { 브랜드: '나이키', 카테고리: '농구', 가격: 120000 },
+  content: 'Nike Basketball Sneakers',
+  metadata: { brand: 'Nike', category: 'Basketball', price: 120 }
 });
 
-// 3. 헬퍼 함수 사용
+// 3. Using helper function
 import { doc } from 'memory-vector-store';
 
-await vectorStore.add(
-  doc('아디다스 축구화', {
-    브랜드: '아디다스',
-    카테고리: '축구',
-    가격: 95000,
-  })
-);
+await vectorStore.add(doc('Adidas Soccer Cleats', { 
+  brand: 'Adidas', 
+  category: 'Soccer',
+  price: 95
+}));
 ```
 
-## 검색 옵션
+## Search Options
 
-### 기본 검색
+### Basic Search
 
 ```javascript
-// 단순 검색, 기본값으로 상위 결과 반환 (기본 k=4)
-const results = await vectorStore.similaritySearch('러닝화');
+// Simple search, returns top results (default k=4)
+const results = await vectorStore.similaritySearch('running shoes');
 ```
 
-### 결과 제한
+### Limiting Results
 
 ```javascript
-// 상위 3개 결과로 제한
-const results = await vectorStore.similaritySearch('러닝화', 3);
+// Limit to top 3 results
+const results = await vectorStore.similaritySearch('running shoes', 3);
 ```
 
-### 결과 필터링
+### Filtering Results
 
 ```javascript
-// 메타데이터 속성으로 필터링
+// Filter by metadata properties
 const results = await vectorStore.similaritySearch(
-  '스포츠 용품',
-  10, // 최대 10개 결과 가져오기
-  (doc) => doc.metadata?.브랜드 === '나이키' // 나이키 제품만
+  'sports gear',
+  10, // Get up to 10 results
+  (doc) => doc.metadata?.brand === 'Nike' // Only Nike products
 );
 
-// 복합 필터링
+// Complex filtering
 const results = await vectorStore.similaritySearch(
-  '신발',
+  'shoes',
   5,
-  (doc) => doc.metadata?.가격 < 150000 && doc.metadata?.카테고리 === '러닝'
+  (doc) => doc.metadata?.price < 150 && doc.metadata?.category === 'Running'
 );
 ```
 
@@ -174,69 +172,69 @@ const results = await vectorStore.similaritySearch(
 
 ### `memoryVectorStore(vectorParser, options?)`
 
-Node.js 환경용 벡터 저장소 인스턴스를 생성합니다.
+Creates a new vector store instance for Node.js environment.
 
-### `browserMemoryVectorStore(vectorParser, options?)` ('memory-vector-store/browser'에서 가져옴)
+### `browserMemoryVectorStore(vectorParser, options?)` (from 'memory-vector-store/browser')
 
-브라우저 환경용 벡터 저장소 인스턴스를 생성합니다.
+Creates a new vector store instance for browser environment.
 
 ### `doc(content, metadata?)`
 
-메타데이터가 있는 문서 객체를 생성하는 헬퍼 함수입니다.
+Helper function to create document objects with metadata.
 
-**매개변수:**
+**Parameters:**
 
-- `vectorParser`: 텍스트를 벡터 표현으로 변환하는 함수
-- `options`: (선택 사항) 구성 옵션
+- `vectorParser`: Function that converts text to a vector representation
+- `options`: (Optional) Configuration options
 
-**옵션:**
+**Options:**
 
-- `autoSave`: (기본값: `true`) 변경 사항을 저장소에 자동으로 저장
-- `debug`: (기본값: `false`) 디버그 로깅 활성화
-- `maxFileSizeMB`: 최대 저장 용량(MB) (브라우저: 0.1-3MB, Node: 1-1000MB)
-- `storagePath`: 저장 경로/키 (기본값 브라우저: 'memory-vector-store', Node: '{cwd}/node_modules/**mvsl**/data.json')
+- `autoSave`: (Default: `true`) Automatically save changes to storage
+- `debug`: (Default: `false`) Enable debug logging
+- `maxFileSizeMB`: Maximum storage size in MB (Browser: 0.1-3MB, Node: 1-1000MB)
+- `storagePath`: Storage path/key (Default browser: 'memory-vector-store', Node: '{cwd}/node_modules/**mvsl**/data.json')
 
-### 저장소 메서드
+### Store Methods
 
-- `add(content: string)`: 텍스트 콘텐츠를 벡터 저장소에 추가
-- `add(document: MemoryDocument)`: 메타데이터가 있는 문서를 벡터 저장소에 추가
-- `similaritySearch(query: string, k?: number, filter?: (doc: MemoryDocument) => boolean)`: 유사 항목 검색
-- `remove(content: string)`: 특정 항목 제거
-- `clear()`: 모든 항목 제거
-- `getAll()`: 저장된 모든 문서 가져오기
-- `count()`: 저장된 항목 수 확인
-- `save()`: 저장소 수동 저장
+- `add(content: string)`: Add text content to the vector store
+- `add(document: MemoryDocument)`: Add document with metadata to the vector store
+- `similaritySearch(query: string, k?: number, filter?: (doc: MemoryDocument) => boolean)`: Search for similar items
+- `remove(content: string)`: Remove a specific item
+- `clear()`: Remove all items
+- `getAll()`: Get all stored documents
+- `count()`: Get the number of stored items
+- `save()`: Manually save the store
 
-## 고급 기능
+## Advanced Features
 
-### 전역 캐싱
+### Global Caching
 
-라이브러리는 더 나은 성능을 위해 자동으로 전역 캐시를 사용합니다:
+The library automatically uses a global cache for better performance:
 
-- 동일한 저장 경로를 가진 여러 벡터 저장소 인스턴스가 같은 데이터를 공유합니다
-- 한 인스턴스에서 변경한 내용이 다른 모든 인스턴스에 반영됩니다
-- 동일한 데이터에 대한 중복 디스크 읽기를 방지합니다
+- Multiple vector store instances with the same storage path share the same data
+- Changes made in one instance are reflected in all others
+- Prevents multiple disk reads for the same data
 
 ```javascript
-// 두 저장소가 동일한 데이터를 공유합니다
+// Both stores share the same data
 const store1 = memoryVectorStore(vectorParser, { storagePath: './data.json' });
 const store2 = memoryVectorStore(vectorParser, { storagePath: './data.json' });
 
-await store1.add('안녕하세요');
-console.log(await store2.count()); // 출력: 1
+await store1.add('Hello world');
+console.log(await store2.count()); // Output: 1
 ```
 
-## 제한사항 및 권장사항
+## Limitations and Recommendations
 
-- **크기 제약**:
-  - 브라우저 버전은 localStorage 제약으로 인해 3MB로 제한됩니다.
-  - Node.js 버전은 기본적으로 최대 500MB로 설정되어 있어 매우 큰 데이터셋에는 적합하지 않을 수 있습니다.
-- **분산 지원 없음**: 분산 환경이나 다중 사용자 시나리오를 지원하지 않습니다.
-- **기본 벡터 검색**: 단순 코사인 유사도를 사용하며, 전용 벡터 데이터베이스의 특화된 최적화를 제공하지 않습니다.
+- **Size Constraints**:
+  - Browser version is limited to 3MB due to localStorage constraints
+  - Node.js version defaults to 500MB maximum, which may not be suitable for very large datasets
+- **No Distributed Support**: Does not support distributed or multi-user scenarios
+- **Basic Vector Search**: Uses simple cosine similarity - may not offer specialized optimizations of dedicated vector databases
 
-## 저장소
+## Storage
 
-라이브러리는 자동으로 적절한 저장 메커니즘을 사용합니다:
+The library automatically uses the appropriate storage mechanism:
 
-- **브라우저**: 기본 3MB 제한으로 `localStorage` 사용
-- **Node.js**: 기본 500MB 제한으로 파일 시스템 저장소 사용
+- **Browser**: Uses `localStorage` with a default limit of 3MB
+- **Node.js**: Uses file system storage with a default limit of 500MB
