@@ -1,20 +1,26 @@
 export class Locker {
   private promise: Promise<void> = Promise.resolve();
   private resolve: () => void = () => {};
+  private _isLocked = false;
 
   constructor() {
     this.lock();
   }
   lock() {
+    this._isLocked = true;
     this.promise = new Promise((resolve) => {
       this.resolve = resolve;
     });
   }
   unLock() {
+    this._isLocked = false;
     this.resolve();
   }
   wait() {
     return this.promise;
+  }
+  isLocked() {
+    return this._isLocked;
   }
 }
 

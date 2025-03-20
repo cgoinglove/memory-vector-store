@@ -30,5 +30,5 @@ for (const data of dataList) {
 
 const result = await vectorStore.similaritySearch('foot', 2);
 
-console.log(result.map((v) => v.data));
+console.log(result.map((v) => v.content));
 // [ 'Adidas Running Shoes', 'Nike Basketball Sneakers' ]

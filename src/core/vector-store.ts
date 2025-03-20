@@ -6,7 +6,28 @@ import {
   MemoryVectorStorageProvider,
   MemoryVectorStoreOptions,
   MemoryVectorStore,
+  MemoryDocument,
 } from '../interface';
+
+export function doc<T>(content: string, metadata?: T): MemoryDocument<T> {
+  return {
+    content,
+    metadata,
+  };
+}
+
+const serializeItem = <T>(entry: [string, { metadata?: T; vector: number[] }]): MemoryVectorDataSerialize => [
+  entry[0],
+  entry[1].vector,
+  entry[1].metadata,
+];
+
+interface StoreCache<T> {
+  dirty: boolean;
+  store: Map<string, { metadata?: T; vector: number[] }>;
+}
+
+const globalCache = new Map<string, StoreCache<any>>();
 
 /**
  * A lightweight in-memory vector store with persistence capabilities.
@@ -14,27 +35,29 @@ import {
  * Supports various storage backends through the MemoryVectorStorageProvider interface.
  * @class VectorStore
  */
-export class VectorStore implements MemoryVectorStore {
-  private cache: Map<string, MemoryVectorData> = new Map();
-
-  private dirty: boolean = false;
+export class VectorStore<T = any> implements MemoryVectorStore<T> {
+  private cache!: StoreCache<T>;
 
   private saveLock = new Locker();
 
-  /**
-   * Creates a new instance of MemoryVectorStore.
-   * @constructor
-   * @param {Function} vectorParser - A function that converts text to a vector representation.
-   * @param {MemoryVectorStorageProvider} storageProvider - The storage provider for persistence.
-   * @param {MemoryVectorStoreOptions} options - Configuration options for the vector store.
-   */
   constructor(
     private vectorParser: MemoryVectorParser,
     private storageProvider: MemoryVectorStorageProvider,
     private options: MemoryVectorStoreOptions
   ) {
+    this.options.storagePath = this.options.storagePath ?? `default`;
     this.saveLock.unLock();
-    this.load();
+    this.initializeStore();
+  }
+
+  private initializeStore(): void {
+    if (globalCache.has(this.options.storagePath)) {
+      this.cache = globalCache.get(this.options.storagePath)!;
+    } else {
+      this.cache = { dirty: false, store: new Map() };
+      this.load();
+      globalCache.set(this.options.storagePath, this.cache);
+    }
   }
 
   private truncateLog(text: string, maxLength: number = 50): string {
@@ -42,29 +65,34 @@ export class VectorStore implements MemoryVectorStore {
     return text.substring(0, maxLength) + '...';
   }
 
-  /**
-   * Adds a new piece of data to the vector store.
-   * If the data already exists, returns the cached value.
-   * @param {string} data - The text data to add.
-   * @returns {Promise<MemoryVectorData>} The added vector data.
-   */
-  async add(data: string): Promise<MemoryVectorData> {
-    if (this.cache.has(data)) {
-      if (this.options.debug) console.log(`[LiteMemoryVectorStore] Cache hit for: "${this.truncateLog(data)}"`);
-      return this.cache.get(data)!;
+  async add(document: string): Promise<MemoryVectorData<T>>;
+  async add(document: MemoryDocument<T>): Promise<MemoryVectorData<T>>;
+  async add(document: unknown): Promise<MemoryVectorData<T>> {
+    const d: MemoryDocument<T> =
+      typeof document === 'string'
+        ? doc(document)
+        : doc((document as MemoryDocument).content, (document as MemoryDocument).metadata);
+
+    if (this.options.debug) {
+      console.log(`[LiteMemoryVectorStore] Adding document: ${this.truncateLog(d.content)}`);
     }
 
-    if (this.options.debug) console.log(`[LiteMemoryVectorStore] Adding new item: "${this.truncateLog(data)}"`);
-    const vector = await this.vectorParser(data);
-    const vectorData = { data, vector };
+    const vector = await this.vectorParser(d.content);
 
-    this.cache.set(data, vectorData);
-    this.dirty = true;
+    if (!Array.isArray(vector)) throw new Error('Vector parser must return an array');
 
+    this.cache.store.set(d.content, {
+      metadata: d.metadata,
+      vector,
+    });
+    this.cache.dirty = true;
     if (this.options.autoSave) {
       this.save();
     }
-    return vectorData;
+    return {
+      document: d,
+      vector,
+    };
   }
 
   private cosineSimilarity(a: number[], b: number[]): number {
@@ -82,48 +110,46 @@ export class VectorStore implements MemoryVectorStore {
 
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
-  /**
-   * Searches for similar items in the vector store.
-   * @param {string} query - The search query.
-   * @param {number} [k=4] - Number of results to return.
-   * @param {Function} [filter] - Optional filter function to apply to results.
-   * @returns {Promise<MemoryVectorData[]>} Sorted array of most similar vector data.
-   */
+
   async similaritySearch(
     query: string,
-    k: number = 4,
-    filter?: (doc: MemoryVectorData) => boolean
-  ): Promise<MemoryVectorData[]> {
+    k?: number,
+    filter?: ((doc: MemoryDocument<T>) => boolean) | undefined
+  ): Promise<(MemoryDocument<T> & { score: number })[]> {
     await this.saveLock.wait();
-    const queryVector = this.cache.get(query)?.vector ?? (await this.vectorParser(query));
+    const queryVector = this.cache.store.get(query)?.vector ?? (await this.vectorParser(query));
 
-    let candidates = Array.from(this.cache.values());
+    let candidates = Array.from(this.cache.store.entries(), ([content, value]) => {
+      const document: MemoryDocument<T> = {
+        content,
+        metadata: value.metadata,
+      };
+      return document;
+    });
     if (filter) {
       candidates = candidates.filter(filter);
     }
 
-    // Calculate similarities and sort
     const scoredResults = candidates.map((item) => ({
       item,
-      score: this.cosineSimilarity(queryVector, item.vector),
+      score: this.cosineSimilarity(queryVector, this.cache.store.get(item.content)!.vector),
     }));
 
     scoredResults.sort((a, b) => b.score - a.score);
 
-    // Return top k results
-    return scoredResults.slice(0, k).map((result) => result.item);
+    return scoredResults.slice(0, k).map((result) => ({
+      content: result.item.content,
+      metadata: result.item.metadata,
+      score: result.score,
+    }));
   }
 
-  /**
-   * Remove a specific piece of data from the store
-   * @param {string} data - The text data to remove
-   */
-  async remove(data: string): Promise<void> {
-    const initialLength = this.cache.size;
-    this.cache.delete(data);
+  async remove(content: string): Promise<void> {
+    const initialLength = this.cache.store.size;
+    this.cache.store.delete(content);
 
-    if (this.cache.size !== initialLength) {
-      this.dirty = true;
+    if (this.cache.store.size !== initialLength) {
+      this.cache.dirty = true;
 
       if (this.options.autoSave) {
         this.save();
@@ -131,13 +157,10 @@ export class VectorStore implements MemoryVectorStore {
     }
   }
 
-  /**
-   * Clear all data from the vector store
-   */
   clear(): void {
-    if (this.cache.size > 0) {
-      this.cache.clear();
-      this.dirty = true;
+    if (this.cache.store.size > 0) {
+      this.cache.store.clear();
+      this.cache.dirty = true;
 
       if (this.options.autoSave) {
         this.save();
@@ -145,12 +168,11 @@ export class VectorStore implements MemoryVectorStore {
     }
   }
 
-  /**
-   * Retrieve all stored vector data
-   * @returns {VectorData[]} Array of all stored vector data
-   */
-  getAll(): MemoryVectorData[] {
-    return Array.from(this.cache.values());
+  getAll(): MemoryDocument<T>[] {
+    return Array.from(this.cache.store.entries(), ([content, value]) => ({
+      content,
+      metadata: value.metadata,
+    }));
   }
 
   /**
@@ -158,24 +180,23 @@ export class VectorStore implements MemoryVectorStore {
    * @returns {number} Total number of vector data items
    */
   count(): number {
-    return this.cache.size;
+    return this.cache.store.size;
   }
 
   /**
    * Save the current state of the vector store to disk
    */
   async save(): Promise<void> {
-    if (!this.dirty || !this.options.storagePath) return Promise.resolve();
+    if (!this.cache.dirty || !this.options.storagePath) return Promise.resolve();
     this.saveLock.lock();
 
     debounce(
       this.options.storagePath,
       async () => {
         try {
-          const allData = this.getAll();
           const maxSizeBytes = (this.options.maxFileSizeMB || 500) * 1024 * 1024;
 
-          const serializedData = allData.map(this.serializeItem);
+          const serializedData = Array.from(this.cache.store.entries(), serializeItem);
           let jsonData = JSON.stringify(serializedData);
           let dataSize = Buffer.byteLength(jsonData, 'utf8');
 
@@ -197,14 +218,17 @@ export class VectorStore implements MemoryVectorStore {
                 `[LiteMemoryVectorStore] Trimmed to ${serializedData.length} items (${this.formatSize(dataSize)})`
               );
             }
-            this.cache.clear();
-            for (const item of serializedData.map(this.deserializeItem)) {
-              this.cache.set(item.data, item);
+            this.cache.store.clear();
+            for (const item of serializedData) {
+              this.cache.store.set(item[0], {
+                metadata: item[2],
+                vector: item[1],
+              });
             }
           }
 
           this.storageProvider.save(this.options.storagePath!, serializedData);
-          this.dirty = false;
+          this.cache.dirty = false;
 
           if (this.options.debug) {
             console.log(
@@ -237,25 +261,19 @@ export class VectorStore implements MemoryVectorStore {
     try {
       if (this.storageProvider.exists(this.options.storagePath)) {
         const data = this.storageProvider.load(this.options.storagePath!);
-        const vectorDatas = data.map(this.deserializeItem);
-        for (const vectorData of vectorDatas) {
-          this.cache.set(vectorData.data, vectorData);
+        for (const vectorData of data) {
+          this.cache.store.set(vectorData[0], {
+            vector: vectorData[1],
+            metadata: vectorData[2],
+          });
         }
-        if (this.options.debug) console.log(`[LiteMemoryVectorStore] Loaded ${this.cache.size} items.`);
+        if (this.options.debug) console.log(`[LiteMemoryVectorStore] Loaded ${this.cache.store.size} items.`);
       } else if (this.options.debug) {
         console.log(`[LiteMemoryVectorStore] No data file found at: ${this.options.storagePath}`);
       }
     } catch (error) {
       console.error('Error loading vector store:', error);
-      this.cache = new Map();
+      this.cache.store.clear();
     }
-  }
-
-  private serializeItem(data: MemoryVectorData): MemoryVectorDataSerialize {
-    return [data.data, data.vector];
-  }
-
-  private deserializeItem(data: MemoryVectorDataSerialize): MemoryVectorData {
-    return { data: data[0], vector: data[1] };
   }
 }
