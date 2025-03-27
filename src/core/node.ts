@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { NodeStorageProvider } from '../storage/node-file-storage';
 import { VectorStore } from './vector-store';
-import { MemoryVectorParser, MemoryVectorStoreOptions } from '../interface';
+import { MemoryVectorParser, MemoryVectorStore, MemoryVectorStoreOptions } from '../interface';
 /**
  * Creates and configures a MemoryVectorStore instance for Node.js environments.
  * This factory function sets up a vector store with appropriate Node.js defaults
@@ -46,7 +46,10 @@ import { MemoryVectorParser, MemoryVectorStoreOptions } from '../interface';
  * capacity limits compared to browser environments. The maxFileSizeMB can be set to
  * higher values according to your disk space and memory constraints.
  */
-export function memoryVectorStore(vectorParser: MemoryVectorParser, options?: Partial<MemoryVectorStoreOptions>) {
+export function memoryVectorStore<Metadata extends Record<string, any> = Record<string, any>>(
+  vectorParser: MemoryVectorParser,
+  options?: Partial<MemoryVectorStoreOptions>
+): MemoryVectorStore<Metadata> {
   const defaultOptions: MemoryVectorStoreOptions = {
     autoSave: true,
     debug: false,

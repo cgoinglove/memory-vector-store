@@ -1,4 +1,4 @@
-import { MemoryVectorParser, MemoryVectorStoreOptions } from '../interface';
+import { MemoryVectorParser, MemoryVectorStore, MemoryVectorStoreOptions } from '../interface';
 import { BrowserStorageProvider } from '../storage/browser-local-storage';
 import { VectorStore } from './vector-store';
 
@@ -44,10 +44,10 @@ import { VectorStore } from './vector-store';
  * Note: maxFileSizeMB is clamped between 0.1MB and 3MB for browser environments
  * due to localStorage limitations.
  */
-export function browserMemoryVectorStore(
+export function browserMemoryVectorStore<Metadata extends Record<string, any> = Record<string, any>>(
   vectorParser: MemoryVectorParser,
   options?: Partial<MemoryVectorStoreOptions>
-) {
+): MemoryVectorStore<Metadata> {
   const defaultOptions: MemoryVectorStoreOptions = {
     autoSave: true,
     debug: false,
